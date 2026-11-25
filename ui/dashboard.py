@@ -174,11 +174,14 @@ def render_map(kin, track=None, info=None, trail_px=(), frame_size=(1280, 720), 
     trail = [_ipt(to_screen(p)) for p in trail_px]
     if city and len(trail) >= 2:  # the driven path is paved as a road
         a = np.array(trail, np.int32).reshape(-1, 1, 2)
-        w = int(18 * ui)
+        w = max(2, int(C.TRAIL_WIDTH * ui))
         T = city_map.theme()
-        cv2.polylines(overlay, [a], False, T["trail"], w + int(14 * ui), AA)  # glow
-        cv2.polylines(img, [a], False, T["edge"], w + 4, AA)
-        cv2.polylines(img, [a], False, T["asphalt"], w, AA)
+        cv2.polylines(overlay, [a], False, C.TRAIL_COLOR, w + int(6 * ui), AA)  # glow
+        layer = img.copy()
+        cv2.polylines(layer, [a], False, T["edge"], w + 2, AA)
+        cv2.polylines(layer, [a], False, T["asphalt"], w, AA)
+        img = cv2.addWeighted(layer, C.TRAIL_OPACITY, img, 1 - C.TRAIL_OPACITY, 0)
+        overlay = cv2.addWeighted(layer, C.TRAIL_OPACITY, overlay, 1 - C.TRAIL_OPACITY, 0)
 
     # car position / heading
     color = C.STATE_COLORS.get(kin.state, DIM)
@@ -208,11 +211,13 @@ def render_map(kin, track=None, info=None, trail_px=(), frame_size=(1280, 720), 
             put(img, lab, org, 0.5 * ui, (255, 255, 255), max(1, int(2 * ui)))
 
     n = len(trail)
-    for i in range(1, n):  # older = dimmer
-        k = 0.2 + 0.8 * i / n
-        tc = city_map.theme()["trail"] if city else (40, 190, 255)
-        cv2.line(img, trail[i - 1], trail[i], tuple(int(v * k) for v in tc),
-                 max(2, int((2 if city else 4) * ui)), AA)
+    if n >= 2:
+        layer = img.copy()
+        for i in range(1, n):  # older = dimmer
+            k = 0.2 + 0.8 * i / n
+            cv2.line(layer, trail[i - 1], trail[i], tuple(int(v * k) for v in C.TRAIL_COLOR),
+                     max(1, int((2 if city else 3) * ui)), AA)
+        img = cv2.addWeighted(layer, C.TRAIL_OPACITY, img, 1 - C.TRAIL_OPACITY, 0)
 
     if car is not None:
         if info is not None and not info["on_track"]:

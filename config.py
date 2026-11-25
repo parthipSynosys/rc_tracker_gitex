@@ -67,6 +67,9 @@ PRINT_INTERVAL_S = 5.0      # periodic terminal summary; state changes print imm
 DASHBOARD_SIZE = (1920, 1080)  # default render size; the dashboard is redrawn at the real window size
 GRAPH_SECONDS = 10.0        # time span shown by the two graphs
 TRAIL_MAX = 600             # number of past positions kept for the map trail
+TRAIL_COLOR = (255, 130, 0) # colour of the driven path (trajectory) on the map, in B,G,R order (blue)
+TRAIL_WIDTH = 8             # width of the driven path on the map (was 18)
+TRAIL_OPACITY = 0.5         # 0 = invisible ... 1 = solid
 ACCEL_BAR_MAX = 100.0       # cm/s^2 shown at the end of the acceleration bar
 SHOW_DASHBOARD = True       # False = camera window only
 FULLSCREEN = False          # False = separate windows (see SEPARATE_DATA_WINDOW); True = one full-screen window (v switches view)
