@@ -1,7 +1,7 @@
 """All tunable settings for the ArUco tracker. Edit values here, not in the code."""
 
 # ---------------------------------------------------------------- camera
-CAMERA_INDEX = 1            # which camera to open (on this PC index 0 doesn't open; 1 works)
+CAMERA_INDEX = 0            # which camera to open (on this PC index 0 doesn't open; 1 works)
 FRAME_WIDTH = 1280          # requested capture width in px
 FRAME_HEIGHT = 720          # requested capture height in px
 CAMERA_FOURCC = "MJPG"      # MJPG gives full frame rate at 720p on the C930e ("" = driver default)
@@ -35,8 +35,11 @@ TURN_WINDOW_S = 0.5         # camera only: turn rate = slope of the heading over
 #   "camera" = only the camera (the old behaviour, no sensor needed).
 MOTION_SOURCE = "sensor"
 IMU_ENABLED = True          # False = do not listen for the sensor at all
-IMU_PORT = 4210             # UDP port; must match PC_PORT in the ESP32 program
-IMU_TIMEOUT_S = 0.5         # no reading for this long = sensor disconnected -> NO SENSOR
+IMU_HOST = "192.168.2.92"   # ESP32 TCP server (telnet sketch, "AccX:..." lines). None = old UDP broadcast firmware
+IMU_TCP_PORT = 23           # TCP port of the ESP32 server (WiFiServer tcp(23))
+IMU_CALIBRATE_S = 2.0       # TCP mode: average this long after connecting (car STILL) and subtract the offset
+IMU_PORT = 4210             # UDP port; must match PC_PORT in the ESP32 program (only when IMU_HOST = None)
+IMU_TIMEOUT_S = 1.5         # no reading for this long = sensor disconnected -> NO SENSOR (telnet sketch sends ~10 Hz with WiFi gaps)
 IMU_MIN_SAMPLES = 10        # readings needed after (re)connecting before the sensor is used
 IMU_FILTER_S = 0.15         # smoothing time (s): bigger = calmer but slower to react
 IMU_ACCEL_THRESHOLD = 25.0  # cm/s^2 forward push -> ACCELERATING (raise if bumps trigger it)

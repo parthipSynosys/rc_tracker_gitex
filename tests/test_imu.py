@@ -37,6 +37,9 @@ def test_parse():
     assert parse("hello") is None
     assert parse("IMU,1,2,3") is None
     assert parse("IMU,1,2,a,b,c,d,e,f") is None
+    s = parse("AccX:-1.56,AccY:0.03,AccZ:10.60,GyroX:-0.56,GyroY:-0.50,GyroZ:0.99\r\n", 5.0)
+    assert s == Sample(5.0, -1.56, 0.03, 10.6, -0.56, -0.5, 0.99, 5.0), s
+    assert parse("AccX:1,AccY:2") is None
 
 
 def test_accelerating():
@@ -176,7 +179,7 @@ def test_moving_and_estimates():
 
 
 def test_reader_receives_udp():
-    r = ImuReader(port=0)  # any free port
+    r = ImuReader(port=0, host="")  # UDP mode, any free port
     assert r.start()
     try:
         tx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -191,6 +194,41 @@ def test_reader_receives_udp():
         assert r.read() == []
     finally:
         r.stop()
+
+
+def test_reader_tcp_with_calibration():
+    srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    srv.bind(("127.0.0.1", 0))
+    srv.listen(1)
+    old = C.IMU_CALIBRATE_S
+    C.IMU_CALIBRATE_S = 0.2
+    r = ImuReader(port=srv.getsockname()[1], host="127.0.0.1")
+    assert r.start()
+    try:
+        conn, _ = srv.accept()
+        rest = b"AccX:-1.50,AccY:0.10,AccZ:10.60,GyroX:-0.50,GyroY:0.00,GyroZ:1.00\r\n"
+        t_end = time.perf_counter() + 0.4
+        while time.perf_counter() < t_end:          # resting readings -> calibration
+            conn.sendall(rest)
+            time.sleep(0.02)
+        conn.sendall(b"AccX:-1.0,AccY:0.10,AccZ:10.60,Gyro")  # split across two sends
+        time.sleep(0.05)
+        conn.sendall(b"X:-0.50,GyroY:0.00,GyroZ:31.00\r\n")
+        deadline = time.perf_counter() + 2
+        got = []
+        while time.perf_counter() < deadline:
+            got += r.read()
+            if got and abs(got[-1].gz - 30) < 1e-6:
+                break
+            time.sleep(0.01)
+        assert r.connected
+        last = got[-1]
+        assert abs(last.ax - 0.5) < 1e-6 and abs(last.gz - 30) < 1e-6 and abs(last.az - 10.6) < 1e-6, last
+        conn.close()
+    finally:
+        r.stop()
+        srv.close()
+        C.IMU_CALIBRATE_S = old
 
 
 if __name__ == "__main__":

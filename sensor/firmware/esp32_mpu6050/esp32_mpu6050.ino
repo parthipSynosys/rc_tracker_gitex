@@ -24,8 +24,8 @@
 #include <Adafruit_Sensor.h>
 
 // ======================= CHANGE THESE =======================
-const char* WIFI_NAME     = "YOUR_WIFI_NAME";
-const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";
+const char* WIFI_NAME     = "Locator 2G (new)";
+const char* WIFI_PASSWORD = "Vision@2k35";
 // ============================================================
 
 const uint16_t PC_PORT        = 4210;  // must match IMU_PORT in config.py

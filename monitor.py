@@ -308,7 +308,7 @@ class Monitor:
             return 1
         self._open_csv()
         if self.imu_reader is not None and self.imu_reader.start():
-            print(f"Listening for the motion sensor on UDP port {self.imu_reader.port}.")
+            print(f"Motion sensor: {self.imu_reader.describe}.")
         if C.MOTION_SOURCE == "sensor" and self.imu_reader is None:
             print("WARNING: MOTION_SOURCE is 'sensor' but IMU_ENABLED is False - the state will show NO SENSOR.")
         t_start = self._t_start = time.perf_counter()
