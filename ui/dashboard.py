@@ -14,7 +14,7 @@ import numpy as np
 import config as C
 import city_map
 import dubai_map
-from kinematics import ACCELERATING, BRAKING, IMU, LEFT, NO_SIGNAL, RIGHT, STRAIGHT
+from kinematics import ACCELERATING, IMU, LEFT, NO_SIGNAL, RIGHT, STRAIGHT
 
 FONT = cv2.FONT_HERSHEY_SIMPLEX
 AA = cv2.LINE_AA
@@ -194,7 +194,7 @@ def render_map(kin, track=None, info=None, trail_px=(), frame_size=(1280, 720), 
         ghost = to_screen(kin.last_px)
 
     if car is not None:  # translucent parts of the car (halo, beam) go into the overlay
-        _draw_car(overlay, car, _last_heading, color, kin.state == BRAKING, ui, "glow")
+        _draw_car(overlay, car, _last_heading, color, False, ui, "glow")
     img = cv2.addWeighted(overlay, 0.28, img, 0.72, 0)
 
     if has_route:
@@ -222,7 +222,7 @@ def render_map(kin, track=None, info=None, trail_px=(), frame_size=(1280, 720), 
     if car is not None:
         if info is not None and not info["on_track"]:
             cv2.line(img, _ipt(car), _ipt(to_screen(info["nearest_px"])), (60, 60, 255), max(2, int(2 * ui)), AA)
-        _draw_car(img, car, _last_heading, color, kin.state == BRAKING, ui, turn=kin.turn)
+        _draw_car(img, car, _last_heading, color, False, ui, turn=kin.turn)
     elif ghost is not None:
         _draw_car(img, ghost, _last_heading, DIM, False, ui, "ghost")
         put(img, f"signal lost {kin.lost_for:.1f}s", (ghost[0] + 28 * ui, ghost[1] + 5 * ui), 0.55 * ui, (80, 170, 255),
@@ -272,7 +272,6 @@ def _panel(kin, info, pressed):
     put(p, "cm/s", (24 + tw, 96), 0.6, DIM, 1)
     turning = kin.turn in (LEFT, RIGHT)
     lamps = (("THROTTLE", kin.state == ACCELERATING, (0, 210, 0), (0, 60, 0)),
-             ("BRAKE", kin.state == BRAKING, (40, 40, 245), (0, 0, 70)),
              (kin.turn if turning else "TURN", turning, C.TURN_COLOR, (0, 50, 70)))
     for i, (lab, on, con, coff) in enumerate(lamps):
         cy = 56 + i * 24
@@ -318,7 +317,6 @@ def _panel(kin, info, pressed):
         ("DISTANCE", f"{kin.distance / 100:.2f} m"),
         ("MAX SPEED", f"{kin.max_speed:.1f}"),
         ("TIME", _fmt_time(kin.elapsed)),
-        ("BRAKES", f"{kin.brake_events}"),
         ("DEVIATION", f"{info['dist_cm']:.1f} cm" if on else "--"),
         ("PROGRESS", f"{info['progress_pct']:.0f}%" if on else "--"),
     )
@@ -436,14 +434,12 @@ def _render_data_wide(kin, info, pressed, W, H):
         cv2.rectangle(img, (X(min(mid, end)), Y(by0)), (X(max(mid, end)), Y(by1)),
                       (0, 200, 0) if frac > 0 else (40, 40, 230), -1)
     cv2.line(img, (X(mid), Y(by0 - 8)), (X(mid), Y(by1 + 8)), TEXT, max(1, int(2 * u)))
-    T("BRAKE", bx0, 548, 0.6, DIM)
     T("THROTTLE", bx1, 548, 0.6, DIM, 1, "r")
 
     card(900, 170, 480, 390)
     T("CONTROLS", 930, 215, 0.8, DIM)
     turning = kin.turn in (LEFT, RIGHT)
     rows = (("THROTTLE", kin.state == ACCELERATING, (0, 210, 0), (0, 60, 0)),
-            ("BRAKE", kin.state == BRAKING, (40, 40, 245), (0, 0, 70)),
             (f"TURN {kin.turn}" if turning else "TURN", turning, C.TURN_COLOR, (0, 50, 70)))
     for i, (lab, on, con, coff) in enumerate(rows):
         cy = 285 + i * 95
@@ -487,13 +483,12 @@ def _render_data_wide(kin, info, pressed, W, H):
         ("DISTANCE", f"{kin.distance / 100:.2f} m"),
         ("MAX SPEED", f"{kin.max_speed:.1f} cm/s"),
         ("TIME", _fmt_time(kin.elapsed)),
-        ("BRAKES", f"{kin.brake_events}"),
         ("DEVIATION", f"{info['dist_cm']:.1f} cm" if tracking else "--"),
         ("PROGRESS", f"{info['progress_pct']:.0f}%" if tracking else "--"),
     )
     for i, (k, v) in enumerate(stats):
-        x = 40 + i * 310
-        card(x, 580, 290, 150)
+        x = 40 + i * 372
+        card(x, 580, 352, 150)
         T(k, x + 24, 625, 0.75, DIM)
         T(v, x + 24, 700, 1.5, TEXT, 3)
 

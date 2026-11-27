@@ -59,6 +59,15 @@ def lsq_slope(ts, vs):
     return sum((t - tm) * (v - vm) for t, v in zip(ts, vs)) / den
 
 
+def trim_window(buf, t, window_s, min_samples, max_age_s=1.0):
+    """Drop samples older than window_s, but keep at least min_samples so a low
+    frame rate (e.g. 5 fps) still gives a value. Never keep anything older than max_age_s."""
+    while buf and t - buf[0][0] > max_age_s:
+        buf.popleft()
+    while len(buf) > min_samples and t - buf[0][0] > window_s:
+        buf.popleft()
+
+
 class Kinematics:
     def __init__(self):
         self.scale = None  # cm per pixel, EMA-smoothed; survives reset()
@@ -124,14 +133,13 @@ class Kinematics:
             return
         if self.t0 is None:
             self.t0 = t
-        dt = min(t - self.t_last, 0.2) if self.t_last is not None else 0.0
+        dt = min(t - self.t_last, 0.5) if self.t_last is not None else 0.0
         self.t_last = t
         self.lost_since = None
         self.pos_px = self.last_px = (x_px, y_px)
 
         self._pos.append((t, x_px * self.scale, y_px * self.scale))
-        while self._pos and t - self._pos[0][0] > C.SPEED_WINDOW_S:
-            self._pos.popleft()
+        trim_window(self._pos, t, C.SPEED_WINDOW_S, C.MIN_SPEED_SAMPLES)
 
         speed_valid = len(self._pos) >= C.MIN_SPEED_SAMPLES
         if speed_valid:
@@ -142,8 +150,7 @@ class Kinematics:
             self._spd.append((t, self.speed))
         else:
             self.speed = 0.0
-        while self._spd and t - self._spd[0][0] > C.ACCEL_WINDOW_S:
-            self._spd.popleft()
+        trim_window(self._spd, t, C.ACCEL_WINDOW_S, 4)
 
         self.accel = 0.0
         accel_valid = False
@@ -234,8 +241,7 @@ class Kinematics:
             unwrapped = self._hd[-1][1] + d
         self._hd_raw = h
         self._hd.append((t, unwrapped))
-        while self._hd and t - self._hd[0][0] > C.TURN_WINDOW_S:
-            self._hd.popleft()
+        trim_window(self._hd, t, C.TURN_WINDOW_S, 4)
         if len(self._hd) >= 4 and self._hd[-1][0] - self._hd[0][0] >= 0.5 * C.TURN_WINDOW_S:
             rate = lsq_slope([p[0] for p in self._hd], [p[1] for p in self._hd])
             self.yaw_rate = -math.degrees(rate)
